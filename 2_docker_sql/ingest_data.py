@@ -9,30 +9,13 @@ import os
 from time import time
 
 import pandas as pd
+import pyarrow.parquet as pq
 from sqlalchemy import create_engine
 
 
-def main(params):
-    user = params.user
-    password = params.password
-    host = params.host
-    port = params.port
-    database = params.db
-    table_name = params.table_name
-    url = params.url
-    csv_name = "output.csv"
-    
-    # download the csv
-    if os.path.exists(csv_name):
-        print(f"{csv_name} already downloaded")
-    else:
-        os.system(f"wget {url} -O {csv_name}")
-    
-    # Connect to database
-    engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{database}")
-
+def load_csv_data(filename, table_name, engine):
     # Read data in chunks of size 100_000 and create a dataframe iterator
-    df_iter = pd.read_csv(csv_name, iterator=True, chunksize=100_000)
+    df_iter = pd.read_csv(filename, iterator=True, chunksize=100_000)
 
     df = next(df_iter)
 
@@ -61,10 +44,73 @@ def main(params):
             t_end = time()
             
             print(f"Inserted another chunk of size {len(df)}: took {t_end - t_start:.3f} seconds")
-    except Exception as e:
+    except StopIteration as e:
         print(str(e))
         print("Finished inserting data")
+
+
+def load_parquet_data(parquet_file, table_name, engine):
+    # Read data in chunks of size 100_000 and create a dataframe iterator
+    pfile = pq.ParquetFile(parquet_file)
+    table_iter = pfile.iter_batches(batch_size=100_000)
+    table = next(table_iter)
+    df = table.to_pandas()
+
+    ### Create table yellow_taxi_data and if exists drop it and create new one
+    df.head(0).to_sql(name=table_name, con=engine, if_exists="replace")
+
+    ### Insert Data into table and append to it if exists
+    df.to_sql(name=table_name, con=engine, if_exists="append")
+
+
+    ### Inserting the rest of the data using loop
+    try:
+        while True:
+            t_start = time()
         
+            table = next(table_iter)
+            df = table.to_pandas()
+            df.to_sql(name=table_name, con=engine, if_exists="append")
+            
+            t_end = time()
+            
+            print(f"Inserted another chunk of size {len(df)}: took {t_end - t_start:.3f} seconds")
+    except StopIteration as e:
+        print(str(e))
+        print("Finished inserting data")
+
+
+def main(params):
+    user = params.user
+    password = params.password
+    host = params.host
+    port = params.port
+    database = params.db
+    table_name = params.table_name
+    url = params.url
+    filename = url.split("/")[-1]
+    
+    
+    # download the csv
+    print(filename)
+    print(os.path.exists(filename))
+    if os.path.exists(filename):
+        print(f"{filename} already downloaded")
+    else:
+        status = os.system(f"wget {url} -O {filename}")
+        if status != 0:
+            return "ERROR 404: File Not Found"
+    
+    # Connect to database
+    engine = create_engine(f"postgresql://{user}:{password}@{host}:{port}/{database}")
+    
+    if filename.endswith("csv"):
+        load_csv_data(filename, table_name, engine)
+    
+    if filename.endswith("parquet"):
+        load_parquet_data(filename, table_name, engine)
+
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Ingest CSV data to Postgres.')
 
