@@ -12,3 +12,4 @@ plugins/
 *.parquet
 *.ipynb_checkpoints
 __pycache__/
+.env

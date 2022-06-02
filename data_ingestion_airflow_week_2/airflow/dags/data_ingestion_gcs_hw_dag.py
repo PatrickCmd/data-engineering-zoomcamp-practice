@@ -50,21 +50,21 @@ default_args = {
 def donwload_parquetize_upload_dag(
     dag,
     url_template,
-    local_csv_path_template,
+    local_file_path_template,
     local_parquet_path_template,
     gcs_path_template
 ):
     with dag:
         download_dataset_task = BashOperator(
             task_id="download_dataset_task",
-            bash_command=f"curl -sSLf {url_template} > {local_csv_path_template}"
+            bash_command=f"curl -sSLf {url_template} > {local_file_path_template}"
         )
 
         format_to_parquet_task = PythonOperator(
             task_id="format_to_parquet_task",
             python_callable=format_to_parquet,
             op_kwargs={
-                "src_file": local_csv_path_template,
+                "src_file": local_file_path_template,
                 "dest_file": local_parquet_path_template
             },
         )
@@ -81,18 +81,19 @@ def donwload_parquetize_upload_dag(
 
         rm_task = BashOperator(
             task_id="rm_task",
-            bash_command=f"rm {local_csv_path_template} {local_parquet_path_template}"
+            bash_command=f"rm {local_file_path_template}"
         )
 
         download_dataset_task >> format_to_parquet_task >> local_to_gcs_task >> rm_task
+        # download_dataset_task >> local_to_gcs_task >> rm_task
 
 
 URL_PREFIX = 'https://s3.amazonaws.com/nyc-tlc/trip+data'
 
-YELLOW_TAXI_URL_TEMPLATE = f"{URL_PREFIX}/yellow_tripdata_{datetime(2019, 1, 1).strftime('%Y-%m')}.csv"
-YELLOW_TAXI_CSV_FILE_TEMPLATE = f"{AIRFLOW_HOME}/yellow_tripdata_{datetime(2019, 1, 1).strftime('%Y-%m')}.csv"
-YELLOW_TAXI_PARQUET_FILE_TEMPLATE = f"{AIRFLOW_HOME}/yellow_tripdata_{datetime(2019, 1, 1).strftime('%Y-%m')}.parquet"
-YELLOW_TAXI_GCS_PATH_TEMPLATE = f"raw/yellow_tripdata/{datetime(2019, 1, 1).strftime('%Y-%m')}/yellow_tripdata_{datetime(2019, 1, 1).strftime('%Y-%m')}.parquet"
+YELLOW_TAXI_URL_TEMPLATE = URL_PREFIX + '/yellow_tripdata_{{ ds[:-3] }}.parquet'
+YELLOW_TAXI_FILE_TEMPLATE =  AIRFLOW_HOME + '/yellow_tripdata_{{ ds[:-3] }}.parquet'
+YELLOW_TAXI_PARQUET_FILE_TEMPLATE =  AIRFLOW_HOME + '/yellow_tripdata_{{ ds[:-3] }}.parquet'
+YELLOW_TAXI_GCS_PATH_TEMPLATE = "raw/yellow_tripdata/{{ ds[:-6] }}/yellow_tripdata_{{ ds[:-3] }}.parquet"
 
 
 yellow_taxi_data_dag = DAG(
@@ -101,24 +102,24 @@ yellow_taxi_data_dag = DAG(
     start_date=datetime(2019, 1, 1),
     default_args=default_args,
     catchup=True,
-    max_active_runs=2,
+    max_active_runs=3,
     tags=['dtc-de'],
 )
 
 donwload_parquetize_upload_dag(
     dag=yellow_taxi_data_dag,
     url_template=YELLOW_TAXI_URL_TEMPLATE,
-    local_csv_path_template=YELLOW_TAXI_CSV_FILE_TEMPLATE,
+    local_file_path_template=YELLOW_TAXI_FILE_TEMPLATE,
     local_parquet_path_template=YELLOW_TAXI_PARQUET_FILE_TEMPLATE,
     gcs_path_template=YELLOW_TAXI_GCS_PATH_TEMPLATE
 )
 
 # https://s3.amazonaws.com/nyc-tlc/trip+data/green_tripdata_2021-01.csv
 
-GREEN_TAXI_URL_TEMPLATE = URL_PREFIX + '/green_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.csv'
-GREEN_TAXI_CSV_FILE_TEMPLATE = AIRFLOW_HOME + '/green_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.csv'
-GREEN_TAXI_PARQUET_FILE_TEMPLATE = AIRFLOW_HOME + '/green_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.parquet'
-GREEN_TAXI_GCS_PATH_TEMPLATE = "raw/green_tripdata/{{ execution_date.strftime(\'%Y\') }}/green_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.parquet"
+GREEN_TAXI_URL_TEMPLATE = URL_PREFIX + '/green_tripdata_{{ ds[:-3] }}.parquet'
+GREEN_TAXI_FILE_TEMPLATE = AIRFLOW_HOME + '/green_tripdata_{{ ds[:-3] }}.parquet'
+GREEN_TAXI_PARQUET_FILE_TEMPLATE = AIRFLOW_HOME + '/green_tripdata_{{ ds[:-3] }}.parquet'
+GREEN_TAXI_GCS_PATH_TEMPLATE = "raw/green_tripdata/{{ ds[:-6] }}/green_tripdata_{{ ds[:-3] }}.parquet"
 
 green_taxi_data_dag = DAG(
     dag_id="green_taxi_data_v1_gcs",
@@ -126,40 +127,40 @@ green_taxi_data_dag = DAG(
     start_date=datetime(2019, 1, 1),
     default_args=default_args,
     catchup=True,
-    max_active_runs=2,
+    max_active_runs=3,
     tags=['dtc-de'],
 )
 
 donwload_parquetize_upload_dag(
     dag=green_taxi_data_dag,
     url_template=GREEN_TAXI_URL_TEMPLATE,
-    local_csv_path_template=GREEN_TAXI_CSV_FILE_TEMPLATE,
+    local_file_path_template=GREEN_TAXI_FILE_TEMPLATE,
     local_parquet_path_template=GREEN_TAXI_PARQUET_FILE_TEMPLATE,
     gcs_path_template=GREEN_TAXI_GCS_PATH_TEMPLATE
 )
 
 # https://nyc-tlc.s3.amazonaws.com/trip+data/fhv_tripdata_2021-01.csv
 
-FHV_TAXI_URL_TEMPLATE = URL_PREFIX + '/fhv_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.csv'
-FHV_TAXI_CSV_FILE_TEMPLATE = AIRFLOW_HOME + '/fhv_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.csv'
-FHV_TAXI_PARQUET_FILE_TEMPLATE = AIRFLOW_HOME + '/fhv_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.parquet'
-FHV_TAXI_GCS_PATH_TEMPLATE = "raw/fhv_tripdata/{{ execution_date.strftime(\'%Y\') }}/fhv_tripdata_{{ execution_date.strftime(\'%Y-%m\') }}.parquet"
+FHV_TAXI_URL_TEMPLATE = URL_PREFIX + '/fhv_tripdata_{{ ds[:-3] }}.parquet'
+FHV_TAXI_FILE_TEMPLATE = AIRFLOW_HOME + '/fhv_tripdata_{{ ds[:-3] }}.parquet'
+FHV_TAXI_PARQUET_FILE_TEMPLATE = AIRFLOW_HOME + '/fhv_tripdata_{{ ds[:-3] }}.parquet'
+FHV_TAXI_GCS_PATH_TEMPLATE = "raw/fhv_tripdata/{{ ds[:-6] }}/fhv_tripdata_{{ ds[:-3] }}.parquet"
 
 fhv_taxi_data_dag = DAG(
-    dag_id="hfv_taxi_data_v1_gcs",
+    dag_id="fhv_taxi_data_v1_gcs",
     schedule_interval="0 8 2 * *",
     start_date=datetime(2019, 1, 1),
     end_date=datetime(2020, 1, 1),
     default_args=default_args,
     catchup=True,
-    max_active_runs=2,
+    max_active_runs=3,
     tags=['dtc-de'],
 )
 
 donwload_parquetize_upload_dag(
     dag=fhv_taxi_data_dag,
     url_template=FHV_TAXI_URL_TEMPLATE,
-    local_csv_path_template=FHV_TAXI_CSV_FILE_TEMPLATE,
+    local_file_path_template=FHV_TAXI_FILE_TEMPLATE,
     local_parquet_path_template=FHV_TAXI_PARQUET_FILE_TEMPLATE,
     gcs_path_template=FHV_TAXI_GCS_PATH_TEMPLATE
 )
@@ -167,7 +168,7 @@ donwload_parquetize_upload_dag(
 # https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv
 
 ZONES_URL_TEMPLATE = 'https://s3.amazonaws.com/nyc-tlc/misc/taxi+_zone_lookup.csv'
-ZONES_CSV_FILE_TEMPLATE = AIRFLOW_HOME + '/taxi_zone_lookup.csv'
+ZONES_FILE_TEMPLATE = AIRFLOW_HOME + '/taxi_zone_lookup.csv'
 ZONES_PARQUET_FILE_TEMPLATE = AIRFLOW_HOME + '/taxi_zone_lookup.parquet'
 ZONES_GCS_PATH_TEMPLATE = "raw/taxi_zone/taxi_zone_lookup.parquet"
 
@@ -177,14 +178,14 @@ zones_data_dag = DAG(
     start_date=days_ago(1),
     default_args=default_args,
     catchup=True,
-    max_active_runs=2,
+    max_active_runs=1,
     tags=['dtc-de'],
 )
 
 donwload_parquetize_upload_dag(
     dag=zones_data_dag,
     url_template=ZONES_URL_TEMPLATE,
-    local_csv_path_template=ZONES_CSV_FILE_TEMPLATE,
+    local_file_path_template=ZONES_FILE_TEMPLATE,
     local_parquet_path_template=ZONES_PARQUET_FILE_TEMPLATE,
     gcs_path_template=ZONES_GCS_PATH_TEMPLATE
 )

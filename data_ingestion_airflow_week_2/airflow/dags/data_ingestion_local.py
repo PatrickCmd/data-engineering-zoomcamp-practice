@@ -23,18 +23,19 @@ PG_DATABASE = os.getenv('PG_DATABASE')
 local_workflow = DAG(
     "LocalIngestionDag",
     schedule_interval="0 6 2 * *",
-    start_date=datetime(2021, 1, 1)
+    start_date=datetime(2021, 1, 1),
+    tags=['dtc-de-local'],
 )
 
 
 URL_PREFIX = 'https://s3.amazonaws.com/nyc-tlc/trip+data' 
-URL_TEMPLATE = f'{URL_PREFIX}/yellow_tripdata_{datetime(2021, 1, 1).strftime("%Y-%m")}.csv'
-OUTPUT_FILE_TEMPLATE = f'{AIRFLOW_HOME}/output_{datetime(2021, 1, 1).strftime("%Y-%m")}.csv'
+URL_TEMPLATE = f'{URL_PREFIX}/yellow_tripdata_{datetime(2021, 1, 1).strftime("%Y-%m")}.parquet'
+OUTPUT_FILE_TEMPLATE = f'{AIRFLOW_HOME}/output_{datetime(2021, 1, 1).strftime("%Y-%m")}.parquet'
 TABLE_NAME_TEMPLATE = f'yellow_taxi_{datetime(2021, 1, 1).strftime("%Y_%m")}'
 
 with local_workflow:
     wget_task = BashOperator(
-        task_id='down_load_csv_file',
+        task_id='down_load_file',
         bash_command=f'curl -sSL {URL_TEMPLATE} > {OUTPUT_FILE_TEMPLATE}'
     )
 
@@ -48,7 +49,7 @@ with local_workflow:
             port=PG_PORT,
             db=PG_DATABASE,
             table_name=TABLE_NAME_TEMPLATE,
-            csv_file=OUTPUT_FILE_TEMPLATE
+            filename=OUTPUT_FILE_TEMPLATE
         ),
     )
 

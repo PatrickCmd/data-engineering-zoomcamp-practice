@@ -18,12 +18,13 @@ services:
       - PGADMIN_DEFAULT_EMAIL=admin@admin.com
       - PGADMIN_DEFAULT_PASSWORD=root
     ports:
-      - "8080:80"
+      - "8089:80"
     networks:
       - airflow
 
+# Connect to a network from an external yaml file
 # external network from airflow
 networks:
   airflow:
-    external:
-      name: airflow_default
+    # external:
+    name: airflow_default
