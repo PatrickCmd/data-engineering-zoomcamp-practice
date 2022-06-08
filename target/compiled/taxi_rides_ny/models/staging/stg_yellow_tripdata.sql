@@ -1,4 +1,12 @@
 
+
+with tripdata as 
+(
+  select *,
+    row_number() over(partition by vendorid, tpep_pickup_datetime) as rn
+  from `dtc-de-course-347010`.`trips_data_all`.`yellow_tripdata`
+  where vendorid is not null 
+)
  
 select
    -- identifiers
@@ -44,8 +52,8 @@ select
         when 6 then 'Voided trip'
     end as payment_type_description, 
     cast(congestion_surcharge as numeric) as congestion_surcharge
-from `dtc-de-course-347010`.`trips_data_all`.`yellow_tripdata`
-where vendorid is not null 
+from tripdata
+where rn = 1
 
 -- dbt build --m <model.sql> --var 'is_test_run: false'
 

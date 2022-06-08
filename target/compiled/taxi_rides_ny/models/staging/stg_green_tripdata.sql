@@ -1,5 +1,13 @@
 
 
+WITH tripdata AS 
+(
+  SELECT *,
+    row_number() OVER(PARTITION BY vendorid, lpep_pickup_datetime) AS rn
+  FROM `dtc-de-course-347010`.`trips_data_all`.`green_tripdata`
+  WHERE vendorid is not null 
+)
+
 SELECT 
     -- identifiers
     to_hex(md5(cast(coalesce(cast(vendorid as 
@@ -43,11 +51,11 @@ SELECT
         when 6 then 'Voided trip'
     end as payment_type_description,
     cast(congestion_surcharge as numeric) as congestion_surcharge
-FROM `dtc-de-course-347010`.`trips_data_all`.`green_tripdata`
-WHERE vendorid IS NOT NULL
+FROM tripdata
+WHERE rn = 1
 
 -- dbt build --m <model.sql> --var 'is_test_run: false'
 
 
-  limit 100
+  LIMIT 100
 
