@@ -59,9 +59,5 @@ FROM tripdata
 WHERE rn = 1
 
 -- dbt build --m <model.sql> --var 'is_test_run: false'
-
-
-  LIMIT 100
-
 ;
 
