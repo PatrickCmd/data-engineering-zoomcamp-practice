@@ -14,10 +14,11 @@ BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET", 'trips_data_all')
 
 DATASET = "tripdata"
 COLOUR_RANGE = {
-    'yellow': 'tpep_pickup_datetime', 
-    'green': 'lpep_pickup_datetime', 
+    # 'yellow': 'tpep_pickup_datetime', 
+    # 'green': 'lpep_pickup_datetime', 
     'fhv': 'DropOff_datetime'
 }
+YEARS_RANGE = {2019, 2020}
 INPUT_PART = "raw"
 INPUT_FILETYPE = "parquet"
 
@@ -39,14 +40,16 @@ with DAG(
 ) as dag:
 
     for colour, ds_col in COLOUR_RANGE.items():
-        move_files_gcs_task = GCSToGCSOperator(
-            task_id=f'move_{colour}_{DATASET}_files_task',
-            source_bucket=BUCKET,
-            source_object=f'{INPUT_PART}/{colour}_{DATASET}/2019/{colour}_{DATASET}*.{INPUT_FILETYPE}',
-            destination_bucket=BUCKET,
-            destination_object=f'{colour}/{colour}_{DATASET}',
-            move_object=True
-        )
+        for year in YEARS_RANGE:
+            print(f"Year transfered: {year}")
+            move_files_gcs_task = GCSToGCSOperator(
+                task_id=f'move_{colour}_{year}_{DATASET}_files_task',
+                source_bucket=BUCKET,
+                source_object=f'{INPUT_PART}/{colour}_{DATASET}/{year}/{colour}_{DATASET}*.{INPUT_FILETYPE}',
+                destination_bucket=BUCKET,
+                destination_object=f'{colour}/{colour}_{DATASET}',
+                move_object=True
+            )
 
         bigquery_external_table_task = BigQueryCreateExternalTableOperator(
             task_id=f"bq_{colour}_{DATASET}_external_table_task",
@@ -70,6 +73,8 @@ with DAG(
             AS \
             SELECT * FROM {BIGQUERY_DATASET}.{colour}_{DATASET}_external_table;"
         )
+        
+        # SELECT * EXCEPT (airport_fee) FROM {BIGQUERY_DATASET}.{colour}_{DATASET}_external_table;"
 
         # Create a partitioned table from external table
         bq_create_partitioned_table_job = BigQueryInsertJobOperator(

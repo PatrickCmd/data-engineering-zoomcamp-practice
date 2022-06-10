@@ -33,3 +33,16 @@ AS SELECT
   CAST(SR_Flag AS	INTEGER) SR_Flag,	
   Affiliated_base_number
 FROM `dtc-de-course-347010.trips_data_all.fhv_tripdata`;
+
+--- PARTITIONED TABLE
+CREATE OR REPLACE TABLE `dtc-de-course-347010.trips_data_all.fhv_tripdata`
+PARTITION BY DATE(pickup_datetime)
+AS SELECT 
+  dispatching_base_num,		
+  pickup_datetime,		
+  dropOff_datetime,		
+  -- CAST(PUlocationID AS FLOAT64) PUlocationID,	
+  -- CAST(DOlocationID AS	FLOAT64) DOlocationID,		
+  -- CAST(SR_Flag AS	INTEGER) SR_Flag,	
+  Affiliated_base_number
+FROM `dtc-de-course-347010.trips_data_all.fhv_tripdata_external_table`;

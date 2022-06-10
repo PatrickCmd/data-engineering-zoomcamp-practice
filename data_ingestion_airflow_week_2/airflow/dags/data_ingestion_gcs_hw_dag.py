@@ -60,14 +60,14 @@ def donwload_parquetize_upload_dag(
             bash_command=f"curl -sSLf {url_template} > {local_file_path_template}"
         )
 
-        format_to_parquet_task = PythonOperator(
-            task_id="format_to_parquet_task",
-            python_callable=format_to_parquet,
-            op_kwargs={
-                "src_file": local_file_path_template,
-                "dest_file": local_parquet_path_template
-            },
-        )
+        # format_to_parquet_task = PythonOperator(
+        #     task_id="format_to_parquet_task",
+        #     python_callable=format_to_parquet,
+        #     op_kwargs={
+        #         "src_file": local_file_path_template,
+        #         "dest_file": local_parquet_path_template
+        #     },
+        # )
 
         local_to_gcs_task = PythonOperator(
             task_id="local_to_gcs_task",
@@ -84,8 +84,8 @@ def donwload_parquetize_upload_dag(
             bash_command=f"rm {local_file_path_template}"
         )
 
-        download_dataset_task >> format_to_parquet_task >> local_to_gcs_task >> rm_task
-        # download_dataset_task >> local_to_gcs_task >> rm_task
+        # download_dataset_task >> format_to_parquet_task >> local_to_gcs_task >> rm_task
+        download_dataset_task >> local_to_gcs_task >> rm_task
 
 
 URL_PREFIX = 'https://s3.amazonaws.com/nyc-tlc/trip+data'
@@ -100,6 +100,7 @@ yellow_taxi_data_dag = DAG(
     dag_id="yellow_taxi_data_v2_gcs",
     schedule_interval="0 6 2 * *",
     start_date=datetime(2019, 1, 1),
+    end_date=datetime(2021, 1, 1),
     default_args=default_args,
     catchup=True,
     max_active_runs=3,
@@ -125,6 +126,7 @@ green_taxi_data_dag = DAG(
     dag_id="green_taxi_data_v1_gcs",
     schedule_interval="0 7 2 * *",
     start_date=datetime(2019, 1, 1),
+    end_date=datetime(2021, 1, 1),
     default_args=default_args,
     catchup=True,
     max_active_runs=3,

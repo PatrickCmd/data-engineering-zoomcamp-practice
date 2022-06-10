@@ -13,3 +13,5 @@ plugins/
 *.ipynb_checkpoints
 __pycache__/
 .env
+dbt/
+fhv/
