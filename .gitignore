@@ -15,3 +15,11 @@ __pycache__/
 .env
 dbt/
 fhv/
+github_repo/
+data/
+fhvhv/
+zones/
+lib/
+.vscode/
+tmp/
+spark-warehouse/
