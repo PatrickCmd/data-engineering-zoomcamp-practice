@@ -1,0 +1,13 @@
+pg-dbt-project:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: pgdatabase
+      user: root
+      pass: root
+      port: 5432
+      dbname: citi_bikes
+      schema: dbt_citi_bikes
+      threads: 4
+      keepalives_idle: 0 # default 0, indicating the system default

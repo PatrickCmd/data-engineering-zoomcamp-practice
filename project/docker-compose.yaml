@@ -1,0 +1,50 @@
+services:
+  pgdatabase:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=citi_bikes
+    volumes:
+      - "./citi_bikes_postgres_data:/var/lib/postgresql/data:rw"
+    ports:
+      - "5432:5432"
+    networks:
+      - airflow
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=root
+    ports:
+      - "8089:80"
+    networks:
+      - airflow
+  
+  dbt-postgres:
+    build:
+      context: .
+      target: dbt-postgres
+    image: dbt/postgres
+    volumes:
+      - .:/usr/app
+      - ~/.dbt/:/root/.dbt/
+    ports:
+      - "8085:8085"
+    networks:
+      - airflow
+  
+  metabase:
+    image: metabase/metabase
+    ports:
+      - 3000:3000
+    networks:
+      - airflow
+
+# Connect to a network from an external yaml file
+# external network from airflow
+networks:
+  airflow:
+    # external:
+    name: airflow_default

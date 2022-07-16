@@ -23,3 +23,5 @@ lib/
 .vscode/
 tmp/
 spark-warehouse/
+citi_bikes_postgres_data/
+dbt-citi-bikes/
